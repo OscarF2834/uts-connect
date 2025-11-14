@@ -1,32 +1,47 @@
-// Auth helper functions
-const TOKEN_KEY = 'uts_auth_token';
-const ROLE_KEY = 'uts_user_role';
-const NAME_KEY = 'uts_user_name';
+// src/lib/auth.ts
 
-export const saveAuthData = (token: string, role: string, name?: string) => {
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
+
+// Guardar token
+export const setToken = (token: string) => {
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(ROLE_KEY, role);
-  if (name) localStorage.setItem(NAME_KEY, name);
 };
 
-export const getAuthToken = (): string | null => {
+// Obtener token
+export const getToken = () => {
   return localStorage.getItem(TOKEN_KEY);
 };
 
-export const getUserRole = (): string | null => {
-  return localStorage.getItem(ROLE_KEY);
+// Guardar usuario
+export const setUser = (user: any) => {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
 };
 
-export const getUserName = (): string | null => {
-  return localStorage.getItem(NAME_KEY);
+// Obtener usuario
+export const getUser = () => {
+  const data = localStorage.getItem(USER_KEY);
+  if (!data) return null;
+  return JSON.parse(data);
 };
 
-export const clearAuthData = () => {
+// Obtener nombre
+export const getUserName = () => {
+  return getUser()?.name || null;
+};
+
+// Obtener rol
+export const getUserRole = () => {
+  return getUser()?.role || null;
+};
+
+// ¿Está autenticado?
+export const isAuthenticated = () => {
+  return !!getToken();
+};
+
+// Cerrar sesión
+export const clearSession = () => {
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(ROLE_KEY);
-  localStorage.removeItem(NAME_KEY);
-};
-
-export const isAuthenticated = (): boolean => {
-  return !!getAuthToken();
+  localStorage.removeItem(USER_KEY);
 };

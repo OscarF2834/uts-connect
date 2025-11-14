@@ -1,103 +1,148 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { GraduationCap, Lock, Mail, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth, loginSchema, registerSchema, type LoginData, type RegisterData } from '@/hooks/use-auth';
-import { isAuthenticated } from '@/lib/auth';
+// src/pages/Auth.tsx
+
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
+import {
+  loginSchema,
+  registerSchema,
+  type LoginData,
+  type RegisterData,
+} from "@/schemas/auth";
+
+import { useAuth } from "@/hooks/use-auth";
+import { isAuthenticated } from "@/lib/auth";
+
+import { GraduationCap, Lock, Mail, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormMessage,
+  FormLabel,
+  FormControl,
+} from "@/components/ui/form";
 
 const Auth = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  const { login, register, isLoading } = useAuth();
+  const [active, setActive] = useState("login");
+  const [error, setError] = useState<string | null>(null);
+
   const navigate = useNavigate();
+  const { login, register, isLoading } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      navigate('/');
-    }
-  }, [navigate]);
+    if (isAuthenticated()) navigate("/");
+  }, []);
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
   });
 
   const registerForm = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-    },
   });
 
   const onLogin = async (data: LoginData) => {
-    await login(data);
+    const res = await login(data);
+    if (!res.ok) {
+      setError(res.message || "Error al iniciar sesión");
+      return;
+    }
+    navigate("/");
   };
 
   const onRegister = async (data: RegisterData) => {
-    await register(data);
+    const res = await register({ ...data, role: "student" });
+    if (!res.ok) {
+      setError(res.message || "No se pudo registrar");
+      return;
+    }
+    navigate("/");
   };
-
+   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-soft">
-            <GraduationCap className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Portal Institucional UTS
-          </h1>
-          <p className="text-muted-foreground">
-            Accede a tu cuenta académica
-          </p>
-        </div>
+    <div className="min-h-screen flex">
+      {/* Imagen izquierda */}
+      <div 
+        className="hidden lg:flex lg:w-1/2 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('https://i.pinimg.com/originals/3d/16/e8/3d16e8f6e620a775285538330113d013.png')`
+        }}
+      />
 
-        <Card className="shadow-soft border-border/50">
-          <CardHeader>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="register">Registrarse</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </CardHeader>
+      {/* Formulario derecha */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="w-full max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex w-20 h-20 items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
+              <GraduationCap className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              RappiUts
+            </h1>
+            <p className="text-gray-600 text-sm mt-2">Bienvenido de vuelta</p>
+          </div>
+
+          <Card className="shadow-xl border-0">
+            <CardHeader className="pb-4">
+              <Tabs value={active} onValueChange={setActive}>
+                <TabsList className="grid grid-cols-2 bg-gray-100 p-1">
+                  <TabsTrigger 
+                    value="login" 
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Iniciar Sesión
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="register"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Registrarse
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+
+            <CardContent className="pt-2"></CardContent>
           <CardContent>
-            <Tabs value={activeTab}>
-              <TabsContent value="login" className="mt-0">
+            {error && (
+              <p className="text-red-500 text-sm text-center mb-4">
+                {error}
+              </p>
+            )}
+
+            <Tabs value={active}>
+              {/* LOGIN */}
+              <TabsContent value="login">
                 <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                  <form
+                    onSubmit={loginForm.handleSubmit(onLogin)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={loginForm.control}
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Correo Institucional</FormLabel>
+                          <FormLabel>Correo</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                type="email"
-                                placeholder="tu@uts.edu.co"
-                                className="pl-10"
-                                disabled={isLoading}
-                              />
-                            </div>
+                            <Input {...field} type="email" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={loginForm.control}
                       name="password"
@@ -105,82 +150,55 @@ const Auth = () => {
                         <FormItem>
                           <FormLabel>Contraseña</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                type="password"
-                                placeholder="••••••••"
-                                className="pl-10"
-                                disabled={isLoading}
-                              />
-                            </div>
+                            <Input {...field} type="password" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+
+                    <Button type="submit" className="w-full">
+                      {isLoading ? "Cargando..." : "Entrar"}
                     </Button>
                   </form>
                 </Form>
               </TabsContent>
 
-              <TabsContent value="register" className="mt-0">
+              {/* REGISTER */}
+              <TabsContent value="register">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                  <form
+                    onSubmit={registerForm.handleSubmit(onRegister)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={registerForm.control}
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nombre Completo</FormLabel>
+                          <FormLabel>Nombre</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                type="text"
-                                placeholder="Juan Pérez"
-                                className="pl-10"
-                                disabled={isLoading}
-                              />
-                            </div>
+                            <Input {...field} type="text" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={registerForm.control}
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Correo Institucional</FormLabel>
+                          <FormLabel>Correo</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                type="email"
-                                placeholder="tu@uts.edu.co o tu@correo.uts.edu.co"
-                                className="pl-10"
-                                disabled={isLoading}
-                              />
-                            </div>
+                            <Input {...field} type="email" />
                           </FormControl>
                           <FormMessage />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Usa @uts.edu.co (estudiantes) o @correo.uts.edu.co (profesores)
-                          </p>
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={registerForm.control}
                       name="password"
@@ -188,27 +206,30 @@ const Auth = () => {
                         <FormItem>
                           <FormLabel>Contraseña</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                type="password"
-                                placeholder="••••••••"
-                                className="pl-10"
-                                disabled={isLoading}
-                              />
-                            </div>
+                            <Input {...field} type="password" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+
+                    <FormField
+  control={registerForm.control}
+  name="password_confirmation"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Confirmar Contraseña</FormLabel>
+      <FormControl>
+        <Input {...field} type="password" />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
+                    <Button type="submit" className="w-full">
+                      {isLoading ? "Creando..." : "Registrar"}
                     </Button>
                   </form>
                 </Form>
@@ -216,12 +237,10 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          © 2025 UTS. Todos los derechos reservados.
-        </p>
       </div>
+
     </div>
+  </div>
   );
 };
 

@@ -1,134 +1,73 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import { toast } from '@/hooks/use-toast';
-import { saveAuthData, clearAuthData } from '@/lib/auth';
+// src/hooks/use-auth.ts
 
-// Validation schemas
-export const loginSchema = z.object({
-  email: z.string().trim().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }),
-});
-
-export const registerSchema = z.object({
-  name: z.string().trim().min(2, { message: "El nombre debe tener al menos 2 caracteres" }).max(100),
-  email: z.string().trim().email({ message: "Email inválido" })
-    .refine((email) => {
-      return email.endsWith('@uts.edu.co') || email.endsWith('@correo.uts.edu.co');
-    }, { message: "Debe usar un correo institucional (@uts.edu.co o @correo.uts.edu.co)" }),
-  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }).max(100),
-});
-
-export type LoginData = z.infer<typeof loginSchema>;
-export type RegisterData = z.infer<typeof registerSchema>;
-
-// Configure your backend URL here
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost/backend/api';
+import { useState } from "react";
+import api from "@/services/api";
+import { setToken, setUser, clearSession } from "@/lib/auth";
+import type { LoginData, RegisterData } from "@/schemas/auth";
 
 export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
+  // LOGIN
   const login = async (data: LoginData) => {
-    setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth.php?action=login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      setIsLoading(true);
+
+      const res = await api.post("/login", data);
+
+      setToken(res.data.token);
+      setUser({
+        id: res.data.user.id,
+        name: res.data.user.name,
+        email: res.data.user.email,
+        role: res.data.user.role?.name ?? "student",
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast({
-          variant: "destructive",
-          title: "Error de autenticación",
-          description: result.error || "Credenciales inválidas",
-        });
-        return;
-      }
-
-      saveAuthData(result.token, result.role);
-      
-      toast({
-        title: "¡Bienvenido!",
-        description: result.message || "Inicio de sesión exitoso",
-      });
-
-      // Redirect based on role
-      if (result.role === 'student') {
-        navigate('/student');
-      } else if (result.role === 'professor') {
-        navigate('/professor');
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de conexión",
-        description: "No se pudo conectar con el servidor",
-      });
+      return { ok: true };
+    } catch (error: any) {
+      return { ok: false, message: error.response?.data?.message };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (data: RegisterData) => {
-    setIsLoading(true);
+  // REGISTER
+  const register = async (data: RegisterData & { role: string }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth.php?action=register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      setIsLoading(true);
+      console.log("📦 Datos enviados al backend (/register):", data);
+
+      const res = await api.post("/register", data);
+
+      setToken(res.data.token);
+      setUser({
+        id: res.data.user.id,
+        name: res.data.user.name,
+        email: res.data.user.email,
+        role: res.data.user.role?.name ?? "student",
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast({
-          variant: "destructive",
-          title: "Error de registro",
-          description: result.error || "No se pudo completar el registro",
-        });
-        return;
-      }
-
-      saveAuthData(result.token, result.role, data.name);
-      
-      toast({
-        title: "¡Registro exitoso!",
-        description: "Tu cuenta ha sido creada correctamente",
-      });
-
-      // Redirect based on role
-      if (result.role === 'student') {
-        navigate('/student');
-      } else if (result.role === 'professor') {
-        navigate('/professor');
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de conexión",
-        description: "No se pudo conectar con el servidor",
-      });
+      return { ok: true };
+    } catch (error: any) {
+      return { ok: false, message: error.response?.data?.message };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    clearAuthData();
-    navigate('/auth');
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente",
-    });
+  // LOGOUT
+  const logout = async () => {
+    try {
+      await api.post("/logout");
+    } catch {}
+    clearSession();
+    window.location.href = "/auth";
   };
 
-  return { login, register, logout, isLoading };
+  return {
+    login,
+    register,
+    logout,
+    isLoading,
+  };
 };

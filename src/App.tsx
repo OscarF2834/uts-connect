@@ -8,6 +8,10 @@ import Auth from "./pages/Auth";
 import Student from "./pages/Student";
 import Professor from "./pages/Professor";
 import NotFound from "./pages/NotFound";
+import Pedidos from "./pages/Pedidos";
+import CrearPedido from "./pages/CrearPedido";
+import VerPedido from "./pages/VerPedido";
+import Notificaciones from "./pages/Notificaciones";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +27,12 @@ const App = () => (
           <Route path="/student" element={<Student />} />
           <Route path="/professor" element={<Professor />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+        
+        <Route path="/pedidos" element={<Pedidos />} />
+        <Route path="/pedidos/nuevo" element={<CrearPedido />} />
+        <Route path="/pedidos/:id" element={<VerPedido />} />
+        <Route path="/notificaciones" element={<Notificaciones />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
