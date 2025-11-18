@@ -58,7 +58,15 @@ const Auth = () => {
       setError(res.message || "Error al iniciar sesión");
       return;
     }
-    navigate("/");
+    // Obtener el rol del usuario logueado
+    const userRole = res.user?.role || res.data?.user?.role || (typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('auth_user') || '{}').role : null);
+    if (userRole === "student" || userRole === "teacher") {
+      navigate("/clientes");
+    } else if (userRole === "vendedor") {
+      navigate("/student");
+    } else {
+      navigate("/"); // Fallback
+    }
   };
 
   const onRegister = async (data: RegisterData) => {
@@ -67,7 +75,7 @@ const Auth = () => {
       setError(res.message || "No se pudo registrar");
       return;
     }
-    navigate("/");
+    navigate("/clientes");
   };
    
   return (
