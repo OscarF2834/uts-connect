@@ -7,23 +7,38 @@ import api from "../services/api";
 const Favores: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = getUser();
-  const role = getUserRole();
+
+  const [user] = useState(getUser());      // 🔥 user ya no cambia en cada render
+  const [role] = useState(getUserRole());  // 🔥 role ya no cambia en cada render
+
   const [favores, setFavores] = useState<Favor[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/favores").then(res => {
-      let favoresDisponibles = res.data;
-      if (role === "vendedor") {
-        favoresDisponibles = favoresDisponibles.filter((f: any) => f.user_id !== user.id);
-      }
-      setFavores(favoresDisponibles);
-      setLoading(false);
-    });
-  }, [role, user]);
+    const cargarFavores = async () => {
+      try {
+        const res = await api.get("/favores");
 
-  // Determinar pantalla principal de regreso
+        let favoresDisponibles = res.data;
+
+        // Evitar propios favores si es vendedor
+        if (role === "vendedor") {
+          favoresDisponibles = favoresDisponibles.filter(
+            (f: any) => f.user_id !== user?.id
+          );
+        }
+
+        setFavores(favoresDisponibles);
+      } catch (error) {
+        console.error("Error cargando favores:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarFavores();
+  }, [role, user?.id]); // 🔥 user.id es estable, no cambia la referencia del objeto
+
   const handleRegresar = () => {
     if (location.state?.from === "student" || role === "vendedor") {
       navigate("/student");
@@ -34,28 +49,41 @@ const Favores: React.FC = () => {
 
   return (
     <main className="p-6 max-w-4xl mx-auto">
-      <button className="mb-4 px-4 py-2 bg-gray-200 rounded" onClick={handleRegresar}>Regresar</button>
+      <button 
+        className="mb-4 px-4 py-2 bg-gray-200 rounded"
+        onClick={handleRegresar}
+      >
+        Regresar
+      </button>
+
       <h1 className="text-2xl font-bold mb-6">Favores disponibles</h1>
-      {loading ? <div>Cargando...</div> : (
-        favores.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">Sin favores por el momento</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {favores.map((favor: any) => (
-              <FavorCard key={favor.id} favor={{
+
+      {loading ? (
+        <div>Cargando...</div>
+      ) : favores.length === 0 ? (
+        <div className="text-center text-gray-500 py-8">
+          Sin favores por el momento
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {favores.map((favor: any) => (
+            <FavorCard
+              key={favor.id}
+              favor={{
                 id: favor.id,
                 title: favor.titulo || favor.title,
                 description: favor.descripcion,
                 price: favor.recompensa || favor.price,
                 author: favor.user?.name || favor.author,
                 location: favor.ubicacion || favor.location,
-                user_id: favor.user_id // <-- Asegura que el id del vendedor esté presente
-              }} />
-            ))}
-          </div>
-        )
+                user_id: favor.user_id // 🔥 importante para las notificaciones
+              }}
+            />
+          ))}
+        </div>
       )}
     </main>
   );
 };
+
 export default Favores;
