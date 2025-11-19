@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUser } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
 
+// URL base del backend
+const API_URL = "http://127.0.0.1:8000/api";
+
 interface Notificacion {
   id: number;
   mensaje: string;
@@ -17,7 +20,7 @@ interface Notificacion {
 const Notificaciones = () => {
   const navigate = useNavigate();
 
-  // Guardar usuario una sola vez → evita loops infinitos
+  // Guardar usuario una sola vez
   const [usuario] = useState(() => getUser());
 
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
@@ -26,32 +29,42 @@ const Notificaciones = () => {
   const [modalId, setModalId] = useState<number | null>(null);
   const [accion, setAccion] = useState<"aceptada" | "rechazada" | null>(null);
 
-  console.log("USUARIO DESDE LOCALSTORAGE:", usuario);
+  /** 📌 Formatear fecha para Laravel (Y-m-d H:i:s) */
+  const fechaLaravel = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate()
+    ).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+  };
 
-  // Cargar notificaciones del vendedor
+  /** 📌 Cargar notificaciones */
   useEffect(() => {
     if (!usuario) return;
 
     setLoading(true);
 
     axios
-      .get(`/api/notificaciones/destinatario/${usuario.id}`)
+      .get(`${API_URL}/notificaciones/destinatario/${usuario.id}`)
       .then((res) => {
         setNotificaciones(Array.isArray(res.data) ? res.data : []);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Error cargando notificaciones:", err);
         setNotificaciones([]);
       })
       .finally(() => setLoading(false));
   }, [usuario]);
 
+  /** 📌 Abrir modal */
   const abrirModal = (id: number, tipo: "aceptada" | "rechazada") => {
     setModalId(id);
     setAccion(tipo);
     setRespuesta("");
   };
 
-  // Ejecuta aceptar/rechazar
+  /** 📌 Ejecutar acción Aceptar / Rechazar */
   const handleAccion = async () => {
     if (!modalId || !accion || !usuario) return;
 
@@ -66,7 +79,7 @@ const Notificaciones = () => {
 
     try {
       // 1️⃣ Actualiza notificación original
-      await axios.put(`/api/notificaciones/${modalId}`, {
+      await axios.put(`${API_URL}/notificaciones/${modalId}`, {
         estado: accion,
         leida: true,
         respuesta: respuesta,
@@ -79,12 +92,12 @@ const Notificaciones = () => {
         )
       );
 
-      // 2️⃣ Envía notificación para el cliente
-      await axios.post("/api/notificaciones", {
+      // 2️⃣ Crear notificación para el cliente
+      await axios.post(`${API_URL}/notificaciones`, {
         user_id: usuario.id,
         destinatario_id: notiOriginal.user_id,
         mensaje: `Tu solicitud fue ${accion}. Respuesta: ${respuesta}`,
-        fecha_envio: new Date().toISOString(),
+        fecha_envio: fechaLaravel(),
         leida: false,
         estado: accion,
       });
@@ -116,7 +129,7 @@ const Notificaciones = () => {
       {/* Loading */}
       {loading && <p>Cargando...</p>}
 
-      {/* Cuando no hay notificaciones */}
+      {/* Sin notificaciones */}
       {!loading && notificaciones.length === 0 && (
         <p className="text-gray-500 text-lg text-center py-12">
           No tienes notificaciones por el momento.
